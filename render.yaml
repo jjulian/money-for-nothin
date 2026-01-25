@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: money-for-nothin
+    runtime: ruby
+    buildCommand: bundle install
+    startCommand: bundle exec puma -C config/puma.rb
+    envVars:
+      - key: RACK_ENV
+        value: production

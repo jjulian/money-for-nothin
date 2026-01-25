@@ -1,3 +1,7 @@
-source 'http://rubygems.org'
+source 'https://rubygems.org'
+
+ruby '3.2.7'
+
 gem 'sinatra'
-gem 'image_suckr'
+gem 'puma'
+gem 'rackup'

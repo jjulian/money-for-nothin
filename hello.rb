@@ -1,13 +1,51 @@
 require 'sinatra'
-require 'image_suckr'
+require 'net/http'
+require 'json'
+require 'uri'
+
+FALLBACK_IMAGES = [
+  "https://upload.wikimedia.org/wikipedia/commons/4/45/GuitareClassique5.png",
+  "https://upload.wikimedia.org/wikipedia/commons/4/4e/Sunburst_Gibson_Les_Paul_Custom.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/a/a2/Fender_Stratocaster_001.jpg"
+].freeze
 
 get '/' do
-  suckr = ImageSuckr::GoogleSuckr.new
-  image_url = suckr.get_image_url('q' => "Dire Straits")
   erb :index, locals: {
-    lyric: lyrics.shuffle.first.strip.upcase,
-    image_url: image_url
+    lyric: lyrics.sample.strip.upcase,
+    image_url: fetch_random_image("Dire Straits")
   }
+end
+
+def fetch_random_image(query)
+  url = URI("https://commons.wikimedia.org/w/api.php")
+  url.query = URI.encode_www_form(
+    action: "query",
+    generator: "search",
+    gsrsearch: query,
+    gsrnamespace: 6,
+    gsrlimit: 20,
+    prop: "imageinfo",
+    iiprop: "url",
+    format: "json"
+  )
+
+  http = Net::HTTP.new(url.host, url.port)
+  http.use_ssl = true
+  http.open_timeout = 5
+  http.read_timeout = 5
+
+  request = Net::HTTP::Get.new(url)
+  request["User-Agent"] = "MoneyForNothin/1.0 (fun Dire Straits lyrics app)"
+
+  response = http.request(request)
+  data = JSON.parse(response.body)
+
+  pages = data.dig("query", "pages") || {}
+  images = pages.values.map { |p| p.dig("imageinfo", 0, "url") }.compact
+  images.empty? ? FALLBACK_IMAGES.sample : images.sample
+rescue => e
+  puts "Image fetch error: #{e.message}"
+  FALLBACK_IMAGES.sample
 end
 
 def lyrics
